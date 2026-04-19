@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Snake</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0f1117;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+  }
+  canvas {
+    display: block;
+    touch-action: none;
+    cursor: none;
+  }
+  #hint {
+    position: absolute;
+    bottom: 20px;
+    color: #555;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hint">move your mouse / drag to guide the snake</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const WORDS = ['SNAKE','HISSS','SSSS','SLITHER','VENOM','FANGS','SCALES','COIL','BITE','CRAWL'];
+const FONT_SIZE = 15;
+const SEG_DIST = 22;
+const SPEED = 6;
+const LEN = 28;
+
+let W = canvas.width = window.innerWidth;
+let H = canvas.height = window.innerHeight;
+
+window.addEventListener('resize', () => {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+});
+
+let target = { x: W / 2, y: H / 2 };
+let active = false;
+
+const body = [];
+for (let i = 0; i < LEN; i++) {
+  body.push({ x: W / 2 - i * SEG_DIST, y: H / 2, angle: 0 });
+}
+
+let wordIdx = 0;
+let charIdx = 0;
+function nextChar() {
+  const word = WORDS[wordIdx % WORDS.length];
+  const ch = word[charIdx % word.length];
+  charIdx++;
+  if (charIdx >= word.length) { charIdx = 0; wordIdx++; }
+  return ch;
+}
+
+const chars = [];
+for (let i = 0; i < LEN; i++) chars.push(nextChar());
+
+let tick = 0;
+
+canvas.addEventListener('mousemove', e => {
+  target.x = e.clientX; target.y = e.clientY;
+  active = true;
+  document.getElementById('hint').style.display = 'none';
+});
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  target.x = e.touches[0].clientX; target.y = e.touches[0].clientY;
+  active = true;
+  document.getElementById('hint').style.display = 'none';
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  target.x = e.touches[0].clientX; target.y = e.touches[0].clientY;
+}, { passive: false });
+
+function update() {
+  tick++;
+
+  if (active) {
+    const head = body[0];
+    const dx = target.x - head.x;
+    const dy = target.y - head.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 2) {
+      const spd = Math.min(SPEED, dist);
+      head.x += (dx / dist) * spd;
+      head.y += (dy / dist) * spd;
+    }
+  }
+
+  for (let i = 1; i < body.length; i++) {
+    const prev = body[i - 1];
+    const cur = body[i];
+    const dx = prev.x - cur.x;
+    const dy = prev.y - cur.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > SEG_DIST) {
+      const ratio = (dist - SEG_DIST) / dist;
+      cur.x += dx * ratio * 0.55;
+      cur.y += dy * ratio * 0.55;
+    }
+    cur.angle = Math.atan2(prev.y - cur.y, prev.x - cur.x);
+  }
+  body[0].angle = body.length > 1
+    ? Math.atan2(body[0].y - body[1].y, body[0].x - body[1].x)
+    : body[0].angle;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#0f1117';
+  ctx.fillRect(0, 0, W, H);
+
+  for (let i = body.length - 1; i >= 0; i--) {
+    const seg = body[i];
+    const t = i / (body.length - 1);
+
+    const brightness = Math.round(220 - t * 160);
+    const alpha = 1 - t * 0.6;
+
+    ctx.save();
+    ctx.translate(seg.x, seg.y);
+    ctx.rotate(seg.angle);
+
+    const fontSize = Math.round(FONT_SIZE - t * 5);
+    ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = `rgba(${brightness},${brightness},${brightness},${alpha.toFixed(2)})`;
+
+    if (i === 0) {
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 12;
+    }
+
+    ctx.fillText(chars[i], 0, 0);
+    ctx.restore();
+  }
+
+  const head = body[0];
+  const angle = body[0].angle;
+  const eyeR = 5;
+  const eyeOff = 9;
+
+  [1, -1].forEach(side => {
+    const ex = head.x + Math.cos(angle + side * 1.1) * eyeOff;
+    const ey = head.y + Math.sin(angle + side * 1.1) * eyeOff;
+    ctx.beginPath();
+    ctx.arc(ex, ey, eyeR, 0, Math.PI * 2);
+    ctx.fillStyle = '#eee';
+    ctx.shadowColor = '#fff';
+    ctx.shadowBlur = 6;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(ex + Math.cos(angle) * 2, ey + Math.sin(angle) * 2, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#111';
+    ctx.shadowBlur = 0;
+    ctx.fill();
+  });
+
+  const tongueFlick = Math.sin(tick * 0.2) > 0.3;
+  if (tongueFlick) {
+    const tb = {
+      x: head.x + Math.cos(angle) * 16,
+      y: head.y + Math.sin(angle) * 16
+    };
+    ctx.save();
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.moveTo(head.x + Math.cos(angle) * 10, head.y + Math.sin(angle) * 10);
+    ctx.lineTo(tb.x, tb.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(tb.x, tb.y);
+    ctx.lineTo(tb.x + Math.cos(angle + 0.45) * 7, tb.y + Math.sin(angle + 0.45) * 7);
+    ctx.moveTo(tb.x, tb.y);
+    ctx.lineTo(tb.x + Math.cos(angle - 0.45) * 7, tb.y + Math.sin(angle - 0.45) * 7);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>

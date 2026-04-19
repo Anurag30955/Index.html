@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Number Adder</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #f0f2f5;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  padding: 20px;
+  min-height: 100vh;
+}
+.container { max-width: 750px; margin: 0 auto; }
+h1 { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+.sub { font-size: 13px; color: #888; margin-bottom: 16px; }
+
+.search-wrap { position: relative; margin-bottom: 14px; }
+.search-wrap input {
+  width: 100%; padding: 11px 16px 11px 40px;
+  border: 1.5px solid #e0e0e0; border-radius: 10px;
+  font-size: 14px; outline: none; background: #fff; color: #222;
+  transition: border 0.2s;
+}
+.search-wrap input:focus { border-color: #4f8ef7; }
+.search-wrap input::placeholder { color: #bbb; }
+.search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
+.search-count { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: #4f8ef7; font-weight: 600; display: none; }
+
+.tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.tab {
+  padding: 9px 18px; border: 1.5px solid #e0e0e0; border-radius: 10px;
+  background: #fff; font-size: 13px; font-weight: 600; color: #888;
+  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.tab.active { background: #4f8ef7; border-color: #4f8ef7; color: #fff; }
+.badge {
+  background: #e05252; color: #fff; border-radius: 10px;
+  padding: 1px 7px; font-size: 11px; font-weight: 700;
+}
+.tab.active .badge { background: rgba(255,255,255,0.35); }
+
+.card { background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+.panel { display: none; }
+.panel.active { display: block; }
+
+textarea {
+  width: 100%; height: 160px; border: 1.5px solid #e0e0e0; border-radius: 10px;
+  padding: 14px; font-size: 15px; font-family: 'Courier New', monospace;
+  resize: vertical; outline: none; color: #222; background: #fafafa; transition: border 0.2s;
+}
+textarea:focus { border-color: #4f8ef7; background: #fff; }
+textarea::placeholder { color: #bbb; }
+
+.upload-row { display: flex; gap: 12px; margin-bottom: 14px; }
+.upload-box {
+  flex: 1; border: 2px dashed #c8dffe; border-radius: 12px;
+  padding: 22px 12px; text-align: center; background: #f5f9ff;
+  cursor: pointer; transition: all 0.2s; position: relative;
+}
+.upload-box:hover { border-color: #4f8ef7; background: #eaf1ff; }
+.upload-box.drag-over { border-color: #4f8ef7; background: #ddeeff; }
+.upload-box.loaded { border-color: #34c77b; border-style: solid; background: #f0fff7; }
+.upload-box input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-box .icon { font-size: 28px; margin-bottom: 6px; }
+.upload-box .lbl { font-size: 13px; font-weight: 600; color: #4f8ef7; }
+.upload-box.loaded .lbl { color: #1e9e5a; }
+.upload-box .hint { font-size: 11px; color: #aaa; margin-top: 3px; }
+
+.sel-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.sel-group { flex: 1; min-width: 150px; }
+.sel-group label { font-size: 11px; color: #777; display: block; margin-bottom: 5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.sel-group select {
+  width: 100%; padding: 8px 10px; border: 1.5px solid #e0e0e0; border-radius: 8px;
+  font-size: 13px; color: #222; background: #fff; outline: none; cursor: pointer;
+}
+.sel-group select:focus { border-color: #4f8ef7; }
+
+.ocr-bar {
+  padding: 9px 13px; border-radius: 8px; font-size: 13px;
+  margin-bottom: 12px; display: none;
+}
+.ocr-bar.loading { background: #fff8e1; color: #7a5c00; display: flex; align-items: center; gap: 8px; }
+.ocr-bar.done    { background: #e8f5e9; color: #1e6e40; display: block; }
+.ocr-bar.fail    { background: #fdecea; color: #b71c1c; display: block; }
+.spin { display: inline-block; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.table-outer { border-radius: 10px; border: 1px solid #eee; overflow: hidden; }
+.table-scroll { max-height: 300px; overflow-y: auto; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 400px; }
+th {
+  background: #f7f7f7; padding: 9px 12px; text-align: left;
+  font-weight: 700; color: #555; border-bottom: 1px solid #eee;
+  position: sticky; top: 0; z-index: 1; white-space: nowrap;
+}
+td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; color: #222; vertical-align: middle; white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+tr.rep-row td { background: #fff5f5; }
+tr.rep-row td:not(:first-child) { color: #bbb; text-decoration: line-through; }
+
+.tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.tag-ok   { background: #e8f8f0; color: #1e7a4a; }
+.tag-dup  { background: #fde; color: #c0392b; }
+.tag-photo { background: #fff3e0; color: #e65100; }
+.tag-both  { background: #f3e5f5; color: #6a1b9a; }
+
+.result-box {
+  background: #f0f6ff; border: 1.5px solid #c8dffe; border-radius: 12px;
+  padding: 18px 22px; display: flex; align-items: center;
+  justify-content: space-between; gap: 16px; margin-bottom: 12px;
+}
+.result-label { font-size: 13px; color: #4f8ef7; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.result-value { font-size: 34px; font-weight: 700; color: #1a1a1a; font-family: 'Courier New', monospace; word-break: break-all; }
+
+.stats { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.stat {
+  background: #f7f7f7; border: 1px solid #eee; border-radius: 8px;
+  padding: 8px 14px; font-size: 12px; color: #666; flex: 1; min-width: 80px; text-align: center;
+}
+.stat span { display: block; font-size: 15px; font-weight: 700; color: #222; margin-top: 2px; font-family: 'Courier New', monospace; }
+.stat.skip span { color: #e05252; }
+
+.err-msg { font-size: 13px; color: #e05252; margin-bottom: 10px; min-height: 18px; }
+.no-data { text-align: center; padding: 32px 20px; color: #ccc; font-size: 14px; }
+
+.btn-clear {
+  width: 100%; padding: 11px; border: 1.5px solid #e0e0e0; border-radius: 10px;
+  background: #fff; font-size: 14px; color: #888; cursor: pointer; transition: all 0.15s;
+}
+.btn-clear:hover { background: #fee; color: #e05252; border-color: #f5c0c0; }
+
+mark.hl { background: #fff176; border-radius: 2px; padding: 0 1px; }
+
+.sep { height: 1px; background: #f0f0f0; margin: 14px 0; }
+.section-title { font-size: 12px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Smart Number Adder</h1>
+  <p class="sub">Add numbers from paste or Excel — with auto duplicate detection, photo comparison & smart search.</p>
+
+  <!-- Global Search -->
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search by name, GSTIN, invoice no., amount..." oninput="applySearch()">
+    <span class="search-count" id="searchCount"></span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('paste')" id="tab-paste">✏️ Paste Numbers</div>
+    <div class="tab" onclick="switchTab('excel')" id="tab-excel">📊 Excel / CSV</div>
+    <div class="tab" onclick="switchTab('repeated')" id="tab-repeated">🔁 Repeated <span class="badge" id="rep-badge">0</span></div>
+  </div>
+
+  <!-- ── PASTE PANEL ── -->
+  <div class="panel active" id="panel-paste">
+    <div class="card">
+      <div class="section-title">Paste your numbers</div>
+      <textarea id="pasteInput" placeholder="Paste numbers separated by commas, spaces, or new lines&#10;e.g.  100, 250.5, 300&#10;      45&#10;      128, 90"></textarea>
+    </div>
+  </div>
+
+  <!-- ── EXCEL PANEL ── -->
+  <div class="panel" id="panel-excel">
+    <div class="card">
+      <div class="section-title">Upload files</div>
+      <div class="upload-row">
+
+        <div class="upload-box" id="excelBox"
+          ondragover="event.preventDefault();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="this.classList.remove('drag-over');handleExcel(event.dataTransfer.files[0])">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleExcel(this.files[0])">
+          <div class="icon">📊</div>
+          <div class="lbl" id="excelLbl">Upload Excel / CSV</div>
+          <div class="hint">.xlsx &nbsp;·&nbsp; .xls &nbsp;·&nbsp; .csv</div>
+        </div>
+
+        <div class="upload-box" id="photoBox"
+          ondragover="event.preventDefault();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="this.classList.remove('drag-over');handlePhoto(event.dataTransfer.files[0])">
+          <input type="file" accept="image/*" onchange="handlePhoto(this.files[0])">
+          <div class="icon">📷</div>
+          <div class="lbl" id="photoLbl">Upload Photo / Screenshot</div>
+          <div class="hint">Detects rows already in photo</div>
+        </div>
+
+      </div>
+
+      <div class="ocr-bar" id="ocrBar"></div>
+
+      <div id="selectors" style="display:none">
+        <div class="sep"></div>
+        <div class="section-title">Configure columns</div>
+        <div class="sel-row">
+          <div class="sel-group">
+            <label>Sheet</label>
+            <select id="sheetSel" onchange="loadSheet()"></select>
+          </div>
+          <div class="sel-group">
+            <label>Column to Sum</label>
+            <select id="sumColSel" onchange="recalculate()"></select>
+          </div>
+          <div class="sel-group">
+            <label>Key Column (duplicate check)</label>
+            <select id="keyColSel" onchange="detectDuplicates()"></select>
+          </div>
+        </div>
+      </div>
+
+      <div id="tableWrap" style="display:none">
+        <div class="sep"></div>
+        <div class="section-title" id="tableTitle">All rows</div>
+        <div class="table-outer">
+          <div class="table-scroll">
+            <table>
+              <thead id="tHead"></thead>
+              <tbody id="tBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REPEATED PANEL ── -->
+  <div class="panel" id="panel-repeated">
+    <div class="card">
+      <div class="section-title">Repeated / duplicate rows — excluded from sum</div>
+      <div id="noRepMsg" class="no-data">✓ No repeated rows detected yet.</div>
+      <div id="repTableWrap" style="display:none">
+        <div class="table-outer">
+          <div class="table-scroll">
+            <table>
+              <thead id="rHead"></thead>
+              <tbody id="rBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RESULTS ── -->
+  <div class="err-msg" id="errMsg"></div>
+
+  <div class="result-box">
+    <div class="result-label">Total Sum</div>
+    <div class="result-value" id="sumVal">0</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">Included <span id="countVal">0</span></div>
+    <div class="stat">Average <span id="avgVal">0</span></div>
+    <div class="stat">Highest <span id="maxVal">—</span></div>
+    <div class="stat">Lowest <span id="minVal">—</span></div>
+    <div class="stat skip">Skipped <span id="skipVal">0</span></div>
+  </div>
+
+  <button class="btn-clear" onclick="clearAll()">Clear Everything</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/tesseract.js@4/dist/tesseract.min.js"></script>
+<script>
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+let workbook   = null;
+let allRows    = [];   // [{ cells:[], repeated:false, repReason:'' }]
+let headers    = [];
+let ocrText    = '';
+let searchQ    = '';
+let activeTab  = 'paste';
+
+// ════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════
+function switchTab(t) {
+  activeTab = t;
+  ['paste','excel','repeated'].forEach(id => {
+    document.getElementById('tab-'+id).classList.toggle('active', id === t);
+    document.getElementById('panel-'+id).classList.toggle('active', id === t);
+  });
+}
+
+// ════════════════════════════════════════════
+//  PASTE
+// ════════════════════════════════════════════
+document.getElementById('pasteInput').addEventListener('input', () => {
+  const raw = document.getElementById('pasteInput').value.trim();
+  setErr('');
+  if (!raw) { resetStats(); return; }
+  const tokens = raw.split(/[\s,\n\r;]+/).filter(Boolean);
+  const nums = [], bad = [];
+  tokens.forEach(t => {
+    const n = parseFloat(t.replace(/,/g,''));
+    isNaN(n) ? bad.push(t) : nums.push(n);
+  });
+  if (bad.length) setErr('Ignored: ' + bad.slice(0,5).join(', ') + (bad.length>5 ? '…' : ''));
+  showStats(nums, 0);
+});
+
+// ════════════════════════════════════════════
+//  EXCEL UPLOAD
+// ════════════════════════════════════════════
+function handleExcel(file) {
+  if (!file) return;
+  setErr('');
+  markBox('excelBox','excelLbl','📊 ' + file.name);
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      workbook = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+      const sel = document.getElementById('sheetSel');
+      sel.innerHTML = '';
+      workbook.SheetNames.forEach(n => {
+        const o = document.createElement('option');
+        o.value = n; o.textContent = n; sel.appendChild(o);
+      });
+      document.getElementById('selectors').style.display = 'block';
+      loadSheet();
+    } catch { setErr('Cannot read file. Make sure it is a valid Excel or CSV.'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function loadSheet() {
+  if (!workbook) return;
+  const sheet = workbook.Sheets[document.getElementById('sheetSel').value];
+  const json  = XLSX.utils.sheet_to_json(sheet, { header:1, defval:'' });
+  if (!json.length) { setErr('Sheet is empty.'); return; }
+
+  headers = json[0].map((h,i) => h !== '' ? String(h) : 'Col '+(i+1));
+  allRows = json.slice(1)
+    .filter(r => r.some(c => c !== ''))
+    .map(r => ({
+      cells: headers.map((_,i) => r[i] !== undefined ? String(r[i]) : ''),
+      repeated: false,
+      repReason: ''
+    }));
+
+  buildColSelect('sumColSel', false);
+  buildColSelect('keyColSel', true);
+  autoPickCols();
+  document.getElementById('tableWrap').style.display = 'block';
+  detectDuplicates();
+}
+
+function buildColSelect(id, withAuto) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '';
+  if (withAuto) {
+    const o = document.createElement('option');
+    o.value = '__auto__'; o.textContent = '— Auto detect —'; sel.appendChild(o);
+  } else {
+    const o = document.createElement('option');
+    o.value = ''; o.textContent = 'Select column…'; sel.appendChild(o);
+  }
+  headers.forEach((h,i) => {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = h; sel.appendChild(o);
+  });
+}
+
+function autoPickCols() {
+  const keyKW = ['gstin','gst','invoice','inv','bill','voucher','name','party','vendor','customer','supplier','id'];
+  const sumKW = ['amount','amt','total','value','price','taxable','igst','cgst','sgst','net','sum','qty','quantity'];
+  const ki = headers.findIndex(h => keyKW.some(k => h.toLowerCase().includes(k)));
+  if (ki >= 0) document.getElementById('keyColSel').value = ki;
+  const si = headers.findIndex(h => sumKW.some(k => h.toLowerCase().includes(k)));
+  if (si >= 0) {
+    document.getElementById('sumColSel').value = si;
+  } else {
+    const ni = headers.findIndex((_,i) => allRows.some(r => !isNaN(parseFloat(r.cells[i]))));
+    if (ni >= 0) document.getElementById('sumColSel').value = ni;
+  }
+}
+
+// ════════════════════════════════════════════
+//  PHOTO / OCR
+// ════════════════════════════════════════════
+async function handlePhoto(file) {
+  if (!file) return;
+  markBox('photoBox','photoLbl','📷 ' + file.name);
+  const bar = document.getElementById('ocrBar');
+  bar.className = 'ocr-bar loading';
+  bar.innerHTML = '<span class="spin">⟳</span> Reading image text… this may take a few seconds.';
+
+  try {
+    const worker = await Tesseract.createWorker('eng');
+    const url    = URL.createObjectURL(file);
+    const { data: { text } } = await worker.recognize(url);
+    await worker.terminate();
+    URL.revokeObjectURL(url);
+
+    ocrText = text.toUpperCase();
+    bar.className = 'ocr-bar done';
+    bar.textContent = '✓ Image scanned. Checking Excel rows against photo content…';
+    detectDuplicates();
+  } catch {
+    bar.className = 'ocr-bar fail';
+    bar.textContent = '✗ Could not read image. Try a clearer screenshot.';
+  }
+}
+
+// ════════════════════════════════════════════
+//  DUPLICATE DETECTION
+// ════════════════════════════════════════════
+function detectDuplicates() {
+  if (!allRows.length) return;
+
+  const kv  = document.getElementById('keyColSel').value;
+  const ki  = (kv === '__auto__' || kv === '') ? null : parseInt(kv);
+
+  // reset
+  allRows.forEach(r => { r.repeated = false; r.repReason = ''; });
+
+  // ── 1. Within-Excel duplicates ──
+  const seen = new Map();
+  allRows.forEach((row, idx) => {
+    const key = ki !== null
+      ? row.cells[ki].trim().toUpperCase()
+      : row.cells.slice(0,3).join('|').trim().toUpperCase();
+    if (!key || key.length < 2) return;
+    if (seen.has(key)) {
+      row.repeated = true;
+      row.repReason = 'Duplicate in file';
+      const fi = seen.get(key);
+      if (!allRows[fi].repeated) {
+        allRows[fi].repeated = true;
+        allRows[fi].repReason = 'Duplicate in file';
+      }
+    } else {
+      seen.set(key, idx);
+    }
+  });
+
+  // ── 2. Rows found in photo OCR text ──
+  if (ocrText) {
+    allRows.forEach(row => {
+      let inPhoto = false;
+      // check key column value
+      if (ki !== null) {
+        const v = row.cells[ki].trim().toUpperCase();
+        if (v.length >= 5 && ocrText.includes(v)) inPhoto = true;
+      }
+      // also check every cell (catches GSTIN, invoice nos automatically)
+      if (!inPhoto) {
+        row.cells.forEach(cell => {
+          const v = cell.trim().toUpperCase();
+          if (v.length >= 6 && ocrText.includes(v)) inPhoto = true;
+        });
+      }
+      if (inPhoto) {
+        const prev = row.repReason;
+        row.repeated   = true;
+        row.repReason  = prev ? 'Duplicate + found in photo' : 'Found in photo';
+      }
+    });
+  }
+
+  renderMainTable();
+  renderRepeatedTab();
+  recalculate();
+}
+
+// ════════════════════════════════════════════
+//  RENDER MAIN TABLE
+// ════════════════════════════════════════════
+function renderMainTable() {
+  const q = searchQ.toUpperCase();
+
+  // header
+  document.getElementById('tHead').innerHTML =
+    '<tr><th>Status</th>' + headers.map(h => `<th>${esc(h)}</th>`).join('') + '</tr>';
+
+  const rows = q
+    ? allRows.filter(r => r.cells.some(c => c.toUpperCase().includes(q)))
+    : allRows;
+
+  const title = document.getElementById('tableTitle');
+  title.textContent = `All rows (${rows.length} shown)`;
+
+  // search count
+  const sc = document.getElementById('searchCount');
+  if (q && rows.length) {
+    sc.style.display = 'block';
+    sc.textContent = rows.length + ' found';
+  } else { sc.style.display = 'none'; }
+
+  const tb = document.getElementById('tBody');
+  tb.innerHTML = '';
+
+  if (!rows.length) {
+    tb.innerHTML = `<tr><td colspan="${headers.length+1}" class="no-data">No rows match your search.</td></tr>`;
+    return;
+  }
+
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    if (row.repeated) tr.classList.add('rep-row');
+    const tagHtml = row.repeated
+      ? `<span class="tag ${row.repReason.includes('photo') && row.repReason.includes('Dup') ? 'tag-both' : row.repReason.includes('photo') ? 'tag-photo' : 'tag-dup'}">${esc(row.repReason)}</span>`
+      : `<span class="tag ta
